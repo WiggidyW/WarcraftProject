@@ -59,10 +59,10 @@ def getForm(WP, form_dict):
 	responses = WP.AppsScript.Forms.read(form_dict.get('id'))
 	return WP.AppsScript.Forms.mostRecentResponse(responses)
 
-def formToDiscordUser(WP, response, guild_name, discord_name, discord_id):
+def formToDiscordUser(WP, response, guild_name, discord_id):
 	fields = ['moniker', 'availability', 'friends']
 	DiscordUser = WP.AppsScript.Forms.WPObjFromFormResponse(response, fields)
-	updateDict = {'type': 'DiscordUser', 'name': discord_name, 'id': discord_id, 'guild': guild_name, 'registeredOn': Time.dateTime()}
+	updateDict = {'type': 'DiscordUser', 'id': discord_id, 'guild': guild_name, 'registeredOn': Time.dateTime()}
 	for key, value in updateDict.items():
 		setattr(DiscordUser, key, value)
 	return DiscordUser

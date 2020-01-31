@@ -17,24 +17,18 @@ class AppsScript:
 		self.Forms = self.Forms(self)
 
 	def run(self, code):
-		try:
-			request = {
-				'function': self.function,
-				'parameters': [code]
-			}
-			response = self.service.scripts().run(body=request, scriptId=self.script_id).execute()
-			return response
-		except errors.HttpError as error:
-			print('Error running Function:\n{0}'.format(error))
-			return None
+		request = {
+			'function': self.function,
+			'parameters': [code]
+		}
+		response = self.service.scripts().run(body=request, scriptId=self.script_id).execute()
+		return response
 
 	class Forms:
 		def __init__(self, AppsScript):
-			self.run = AppsScript.run
-			self.script_id = AppsScript.script_id
-			self.service = AppsScript.service
-			self.function = AppsScript.function
+			self.AppsScript = AppsScript
 
+		# Creates a new form. ID is the title of the form, and list is a list of dictionaries that define questions for the form.
 		def create(self, id_, list_):
 			def multipleChoice(code, type_, title, choices):
 				formatted_choices = []
@@ -57,11 +51,8 @@ class AppsScript:
 					text(code, type_, dict_.get('title'))
 				code.append('returnVal = [form.getId(), form.getPublishedUrl(), form.getEditUrl()];')
 
-			response = self.run(code)
-			try:
-				return response['response']['result']
-			except KeyError:
-				return None
+			response = self.AppsScript.run(code)
+			return response['response']['result']
 
 		# Returns 2D Array of following rows:
 		# [ResponseID, Timestamp, QuestionAnswer1, ..., QuestionAnswerN]
@@ -71,11 +62,8 @@ class AppsScript:
 			code.append('var form = FormApp.openById("{0}");'.format(id_))
 			code.append('returnVal[0] = form.getResponses().length;')
 			code.append('returnVal[1] = form.getItems().length;')
-			response = self.run(code)
-			try:
-				response_count = response['response']['result']
-			except KeyError:
-				return None
+			response = self.AppsScript.run(code)
+			response_count = response['response']['result']
 
 			code = []
 			code.append('returnVal = [];')
@@ -88,8 +76,32 @@ class AppsScript:
 					code.append('try {{tempArr[{jPlus}] = itemResponses[{j}].getResponse();}}'.format(jPlus=j+2, j=j) +
 						'catch (e) {{tempArr[{jPlus}] = "";}}'.format(jPlus=j+2))
 				code.append('returnVal[{i}] = tempArr;'.format(i=i))
-			response = self.run(code)
-			try:
-				return response['response']['result']
-			except KeyError:
-				return None
+			response = self.AppsScript.run(code)
+			return response['response']['result']
+
+		# Takes a form dictionary returned by create() and sets default responses, and then returns the URL for that form.
+		def createFormResponse(self, formArr, answers):
+			code = []
+			code.append('var form = FormApp.openById("{0}");'.format(formArr[0]))
+			code.append('var items = form.getItems();')
+			code.append('var formResponse = form.createResponse();')
+			i = 0
+			for answer in answers:
+				if answer:
+					if answer != '':
+						code.append('var item = items[{i}];'.format(i=i))
+						code.append('if (item.getType() == FormApp.ItemType.CHECKBOX) {item = item.asCheckboxItem();}')
+						code.append('if (item.getType() == FormApp.ItemType.TEXT) {item = item.asTextItem();}')
+						code.append('if (item.getType() == FormApp.ItemType.PARAGRAPH_TEXT) {item = item.asParagraphTextItem();}')
+						code.append('if (item.getType() == FormApp.ItemType.MULTIPLE_CHOICE) {item = item.asMultipleChoiceItem();}')
+						if isinstance(answer, list):
+							for item in answer:
+								item = '"{0}"'.format(item)
+							code.append('var itemResponse = item.createResponse({answer});'.format(answer=answer))
+						elif isinstance(answer, str):
+							code.append('var itemResponse = item.createResponse("{answer}");'.format(answer=answer))
+						code.append('formResponse.withItemResponse(itemResponse);')
+				i += 1
+			code.append('returnVal = formResponse.toPrefilledUrl();')
+			response = self.AppsScript.run(code)
+			return response['response']['result']

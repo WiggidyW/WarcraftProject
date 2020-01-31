@@ -4,4 +4,9 @@ class Drive:
 		self.client = WP.drive_client
 
 	def deleteFile(self, id_):
-		self.client.deleteFile(id_)
+		try:
+			self.client.deleteFile(id_)
+			return True
+		except Exception as e:
+			print(e)
+			return None

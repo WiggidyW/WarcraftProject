@@ -12,5 +12,6 @@ class Drive:
 		creds = Auth.loadCreds(SCOPES, 'drive')
 		self.service = build('drive', 'v3', credentials=creds)
 
+	# Deletes a file by its ID.
 	def deleteFile(self, id_):
 		self.service.files().delete(fileId=id_).execute()
